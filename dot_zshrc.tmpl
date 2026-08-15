@@ -5,8 +5,22 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# Homebrew (Apple Silicon)
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# ============================================================
+# Platform environment
+# ============================================================
+
+{{- if eq .chezmoi.os "darwin" }}
+
+# Homebrew on Apple Silicon macOS
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+{{- else if eq .chezmoi.os "linux" }}
+
+# Linux-specific environment can be added here when needed.
+
+{{- end }}
 
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
@@ -94,8 +108,8 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 
 # fzf key bindings and completion (Ctrl-R, Ctrl-T, Alt-C)
-if [[ -x /opt/homebrew/bin/fzf ]]; then
-  source <(/opt/homebrew/bin/fzf --zsh)
+if command -v fzf >/dev/null 2>&1; then
+  source <(fzf --zsh)
 fi
 
 # export MANPATH="/usr/local/man:$MANPATH"

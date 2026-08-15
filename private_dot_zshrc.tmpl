@@ -142,6 +142,10 @@ fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+# Machine-local environment variables and secrets belong in ~/.zshrc.local.
+# This file is deliberately not managed by chezmoi.
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
 # ============================================================
 # tmux workspace picker
 # ============================================================
@@ -151,6 +155,7 @@ typeset -ga TM_PROJECT_ROOTS=(
   "$HOME/Developer"
   "$HOME/code"
   "$HOME/.config/nvim"
+  "$HOME/fyp"
 )
 
 

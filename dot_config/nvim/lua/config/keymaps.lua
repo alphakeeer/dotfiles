@@ -16,8 +16,30 @@ map("n", "<C-l>", "<C-w>l", { desc = "Window Right" })
 -- Better movement
 -- ============================================================
 
-map("n", "j", "gj", { silent = true })
-map("n", "k", "gk", { silent = true })
+-- A single j/k moves one display line. Holding either key causes repeated input
+-- events; after the first one, accelerate each event to three display lines.
+local last_motion_at = { j = 0, k = 0 }
+local repeat_threshold_ns = 125 * 1000 * 1000
+
+local function vertical_motion(key)
+  if vim.v.count > 0 then
+    return vim.v.count .. "g" .. key
+  end
+
+  local now = vim.uv.hrtime()
+  local is_repeating = now - last_motion_at[key] <= repeat_threshold_ns
+  last_motion_at[key] = now
+
+  return (is_repeating and "3" or "") .. "g" .. key
+end
+
+map("n", "j", function()
+  return vertical_motion("j")
+end, { expr = true, silent = true, desc = "Move Down (accelerates when held)" })
+
+map("n", "k", function()
+  return vertical_motion("k")
+end, { expr = true, silent = true, desc = "Move Up (accelerates when held)" })
 
 -- Keep selection when indenting
 map("v", "<", "<gv")
@@ -39,8 +61,12 @@ map("n", "<leader>w", "<cmd>write<CR>", {
   desc = "Save File",
 })
 
-map("n", "<leader>q", "<cmd>quit<CR>", {
-  desc = "Quit Window",
+map("n", "<leader>q", "<cmd>qall<CR>", {
+  desc = "Quit Neovim",
+})
+
+map("n", "<leader>wc", "<cmd>close<CR>", {
+  desc = "Close Window",
 })
 
 -- ============================================================

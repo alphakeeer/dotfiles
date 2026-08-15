@@ -1,0 +1,480 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Homebrew (Apple Silicon)
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# If you come from bash you might have to change your $PATH.
+# export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+
+# Path to your Oh My Zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+# Set name of the theme to load --- if set to "random", it will
+# load a random theme each time Oh My Zsh is loaded, in which case,
+# to know which specific one was loaded, run: echo $RANDOM_THEME
+# See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Set list of themes to pick from when loading at random
+# Setting this variable when ZSH_THEME=random will cause zsh to load
+# a theme from this variable instead of looking in $ZSH/themes/
+# If set to an empty array, this variable will have no effect.
+# ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
+# Uncomment the following line to use case-sensitive completion.
+# CASE_SENSITIVE="true"
+
+# Uncomment the following line to use hyphen-insensitive completion.
+# Case-sensitive completion must be off. _ and - will be interchangeable.
+# HYPHEN_INSENSITIVE="true"
+
+# Uncomment one of the following lines to change the auto-update behavior
+# zstyle ':omz:update' mode disabled  # disable automatic updates
+# zstyle ':omz:update' mode auto      # update automatically without asking
+# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+
+# Uncomment the following line to change how often to auto-update (in days).
+# zstyle ':omz:update' frequency 13
+
+# Uncomment the following line if pasting URLs and other text is messed up.
+# DISABLE_MAGIC_FUNCTIONS="true"
+
+# Uncomment the following line to disable colors in ls.
+# DISABLE_LS_COLORS="true"
+
+# Uncomment the following line to disable auto-setting terminal title.
+# DISABLE_AUTO_TITLE="true"
+
+# Uncomment the following line to enable command auto-correction.
+# ENABLE_CORRECTION="true"
+
+# Uncomment the following line to display red dots whilst waiting for completion.
+# You can also set it to another string to have that shown instead of the default red dots.
+# e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+# Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
+# COMPLETION_WAITING_DOTS="true"
+
+# Uncomment the following line if you want to disable marking untracked files
+# under VCS as dirty. This makes repository status check for large repositories
+# much, much faster.
+# DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+# Uncomment the following line if you want to change the command execution time
+# stamp shown in the history command output.
+# You can set one of the optional three formats:
+# "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+# or set a custom format using the strftime function format specifications,
+# see 'man strftime' for details.
+# HIST_STAMPS="mm/dd/yyyy"
+
+# Would you like to use another custom folder than $ZSH/custom?
+# ZSH_CUSTOM=/path/to/new-custom-folder
+
+# Which plugins would you like to load?
+# Standard plugins can be found in $ZSH/plugins/
+# Custom plugins may be added to $ZSH_CUSTOM/plugins/
+# Example format: plugins=(rails git textmate ruby lighthouse)
+# Add wisely, as too many plugins slow down shell startup.
+plugins=(
+  git
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+source $ZSH/oh-my-zsh.sh
+
+# User configuration
+
+# Default command-line editor
+export EDITOR="nvim"
+export VISUAL="nvim"
+
+# fzf key bindings and completion (Ctrl-R, Ctrl-T, Alt-C)
+if [[ -x /opt/homebrew/bin/fzf ]]; then
+  source <(/opt/homebrew/bin/fzf --zsh)
+fi
+
+# export MANPATH="/usr/local/man:$MANPATH"
+
+# You may need to manually set your language environment
+# export LANG=en_US.UTF-8
+
+# Preferred editor for local and remote sessions
+# if [[ -n $SSH_CONNECTION ]]; then
+#   export EDITOR='vim'
+# else
+#   export EDITOR='nvim'
+# fi
+
+# Compilation flags
+# export ARCHFLAGS="-arch $(uname -m)"
+
+# Set personal aliases, overriding those provided by Oh My Zsh libs,
+# plugins, and themes. Aliases can be placed here, though Oh My Zsh
+# users are encouraged to define aliases within a top-level file in
+# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+# - $ZSH_CUSTOM/aliases.zsh
+# - $ZSH_CUSTOM/macos.zsh
+# For a full list of active aliases, run `alias`.
+#
+# Example aliases
+# alias zshconfig="mate ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ============================================================
+# tmux workspace picker
+# ============================================================
+
+typeset -ga TM_PROJECT_ROOTS=(
+  "$HOME/Projects"
+  "$HOME/Developer"
+  "$HOME/code"
+  "$HOME/.config/nvim"
+)
+
+
+# ------------------------------------------------------------
+# Discover Git projects from configured roots
+# ------------------------------------------------------------
+
+_tm_project_candidates() {
+  local root marker project
+  local -A seen
+
+  for root in "${TM_PROJECT_ROOTS[@]}"; do
+    [[ -e "$root" ]] || continue
+
+    # The root itself may already be a Git repository.
+    project="$(git -C "$root" rev-parse --show-toplevel 2>/dev/null)"
+
+    if [[ -n "$project" ]]; then
+      if [[ -z "${seen[$project]-}" ]]; then
+        seen[$project]=1
+        print -r -- "$project"
+      fi
+      continue
+    fi
+
+    # Otherwise discover repositories below it.
+    while IFS= read -r marker; do
+      marker="${marker%/}"
+      project="${marker:h}"
+
+      project="$(
+        git -C "$project" rev-parse --show-toplevel 2>/dev/null
+      )" || continue
+
+      if [[ -z "${seen[$project]-}" ]]; then
+        seen[$project]=1
+        print -r -- "$project"
+      fi
+    done < <(
+      {
+        fd -H -t d -d 5 '^\.git$' "$root" 2>/dev/null
+        fd -H -t f -d 5 '^\.git$' "$root" 2>/dev/null
+      } | sort -u
+    )
+  done
+}
+
+
+# ------------------------------------------------------------
+# Build unified workspace list
+#
+# Format:
+#   TYPE<TAB>NAME<TAB>PATH<TAB>DISPLAY
+# ------------------------------------------------------------
+
+_tm_workspace_candidates() {
+  local session workspace_path project current_root current_session label
+  local -A seen_paths
+
+  current_session=""
+  if [[ -n "$TMUX" ]]; then
+    current_session="$(tmux display-message -p '#S' 2>/dev/null)"
+  fi
+
+  # Existing tmux sessions
+  while IFS= read -r session; do
+    [[ -n "$session" ]] || continue
+
+    workspace_path="$(
+      tmux show-options \
+        -t "=$session" \
+        -qv @project_root 2>/dev/null
+    )"
+
+    if [[ -z "$workspace_path" ]]; then
+      workspace_path="$(
+        tmux display-message \
+          -p \
+          -t "=$session" \
+          '#{pane_current_path}' 2>/dev/null
+      )"
+    fi
+
+    [[ -n "$workspace_path" ]] || workspace_path="$HOME"
+
+    seen_paths[$workspace_path]=1
+
+    if [[ "$session" == "$current_session" ]]; then
+      label="SESSION *"
+    else
+      label="SESSION"
+    fi
+
+    printf '%s\t%s\t%s\t%-10s %-24s %s\n' \
+      "session" \
+      "$session" \
+      "$workspace_path" \
+      "$label" \
+      "$session" \
+      "$workspace_path"
+
+  done < <(
+    tmux list-sessions -F '#{session_name}' 2>/dev/null
+  )
+
+  # Current directory / Git repository
+  current_root="$(
+    git -C "$PWD" rev-parse --show-toplevel 2>/dev/null ||
+      pwd -P
+  )"
+
+  if [[ -n "$current_root" && -z "${seen_paths[$current_root]-}" ]]; then
+    seen_paths[$current_root]=1
+
+    printf '%s\t%s\t%s\t%-10s %-24s %s\n' \
+      "project" \
+      "$(basename "$current_root")" \
+      "$current_root" \
+      "CURRENT" \
+      "$(basename "$current_root")" \
+      "$current_root"
+  fi
+
+  # Discovered projects
+  while IFS= read -r project; do
+    [[ -n "$project" ]] || continue
+    [[ -n "${seen_paths[$project]-}" ]] && continue
+
+    seen_paths[$project]=1
+
+    printf '%s\t%s\t%s\t%-10s %-24s %s\n' \
+      "project" \
+      "$(basename "$project")" \
+      "$project" \
+      "PROJECT" \
+      "$(basename "$project")" \
+      "$project"
+
+  done < <(_tm_project_candidates)
+}
+
+# ------------------------------------------------------------
+# Unified fzf picker
+# ------------------------------------------------------------
+
+_tm_pick_workspace() {
+  local -a display_opts
+
+  if [[ -n "$TM_PROJECT_POPUP" ]]; then
+    display_opts=(
+      --layout reverse
+    )
+  elif [[ -n "$TMUX" ]]; then
+    display_opts=(
+      --popup 'center,90%,78%,border-native'
+    )
+  else
+    display_opts=(
+      --height '75%'
+      --layout reverse
+      --border
+    )
+  fi
+
+  _tm_workspace_candidates |
+    fzf \
+      "${display_opts[@]}" \
+      --delimiter=$'\t' \
+      --with-nth=4 \
+      --prompt=' Workspace ❯ ' \
+      --pointer='❯' \
+      --header='SESSION: existing tmux   CURRENT: cwd   PROJECT: discovered repo' \
+      --preview '
+        kind={1}
+        name={2}
+        path={3}
+
+        if [ "$kind" = "session" ]; then
+          printf "tmux session\n────────────\n%s\n\n" "$name"
+
+          printf "Windows\n───────\n"
+          tmux list-windows \
+            -t "=$name" \
+            -F "#{window_index}: #{window_name}  [#{window_panes} panes]" \
+            2>/dev/null
+
+          printf "\nDirectory\n─────────\n%s\n" "$path"
+        else
+          printf "Project\n───────\n%s\n\n" "$path"
+
+          printf "Git status\n──────────\n"
+          git -C "$path" status --short --branch 2>/dev/null
+
+          printf "\nRecent commits\n──────────────\n"
+          git -C "$path" log -5 --oneline --decorate 2>/dev/null
+        fi
+      ' \
+      --preview-window='right,50%,border-left'
+}
+
+
+# ------------------------------------------------------------
+# Switch to existing tmux session
+# ------------------------------------------------------------
+
+_tm_switch_session() {
+  local session="$1"
+
+  if [[ -n "$TMUX" ]]; then
+    tmux switch-client -t "=$session"
+  else
+    tmux attach-session -t "=$session"
+  fi
+}
+
+
+# ------------------------------------------------------------
+# Open / create project session
+# ------------------------------------------------------------
+
+_tm_open_project() {
+  local dir root session stored_root parent base candidate i
+
+  dir="$1"
+
+  if [[ ! -d "$dir" ]]; then
+    echo "tm: not a directory: $dir" >&2
+    return 1
+  fi
+
+  root="$(
+    git -C "$dir" rev-parse --show-toplevel 2>/dev/null ||
+      (cd "$dir" && pwd -P)
+  )" || return 1
+
+  base="$(basename "$root")"
+  base="${base//[:. ]/_}"
+
+  session="$base"
+
+
+  # ----------------------------------------------------------
+  # Find a safe session name
+  # ----------------------------------------------------------
+
+  if tmux has-session -t "=$session" 2>/dev/null; then
+    stored_root="$(
+      tmux show-options \
+        -t "=$session" \
+        -qv @project_root 2>/dev/null
+    )"
+
+    # Same project -> reuse it.
+    if [[ -z "$stored_root" || "$stored_root" == "$root" ]]; then
+      _tm_switch_session "$session"
+      return
+    fi
+
+    # Same repo basename somewhere else.
+    parent="$(basename "${root:h}")"
+    candidate="${parent}-${base}"
+    candidate="${candidate//[:. ]/_}"
+
+    session="$candidate"
+    i=2
+
+    while tmux has-session -t "=$session" 2>/dev/null; do
+      stored_root="$(
+        tmux show-options \
+          -t "=$session" \
+          -qv @project_root 2>/dev/null
+      )"
+
+      if [[ "$stored_root" == "$root" ]]; then
+        _tm_switch_session "$session"
+        return
+      fi
+
+      session="${candidate}-${i}"
+      (( i++ ))
+    done
+  fi
+
+
+  # ----------------------------------------------------------
+  # Create session
+  # ----------------------------------------------------------
+
+  tmux new-session \
+    -d \
+    -s "$session" \
+    -c "$root"
+
+  tmux set-option \
+    -t "=$session" \
+    @project_root "$root"
+
+  _tm_switch_session "$session"
+}
+
+
+# ------------------------------------------------------------
+# Public command
+# ------------------------------------------------------------
+
+tm() {
+  local selection kind name workspace_path
+
+  case "$#" in
+    0)
+      selection="$(_tm_pick_workspace)" || return
+      [[ -n "$selection" ]] || return
+
+      IFS=$'\t' read -r kind name workspace_path _ <<< "$selection"
+
+      case "$kind" in
+        session)
+          _tm_switch_session "$name"
+          ;;
+
+        project)
+          _tm_open_project "$workspace_path"
+          ;;
+
+        *)
+          echo "tm: unknown workspace type: $kind" >&2
+          return 1
+          ;;
+      esac
+      ;;
+
+    1)
+      _tm_open_project "$1"
+      ;;
+
+    *)
+      echo "usage: tm [directory]" >&2
+      return 2
+      ;;
+  esac
+}

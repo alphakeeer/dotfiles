@@ -93,5 +93,9 @@ opt.laststatus = 3
 -- ============================================================
 
 -- Use the system clipboard by default.
--- On SSH, config.platform redirects this through OSC 52.
-opt.clipboard = "unnamedplus"
+-- On SSH + tmux, config.platform redirects this through tmux buffers.
+-- On SSH without tmux it is left empty to avoid slow OSC 52 queries;
+-- use the terminal's own copy/paste there.
+if not vim.g.ssh_without_tmux then
+  opt.clipboard = "unnamedplus"
+end
